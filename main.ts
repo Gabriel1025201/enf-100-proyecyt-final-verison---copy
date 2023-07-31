@@ -2,8 +2,9 @@ namespace SpriteKind {
     export const P_1 = SpriteKind.create()
     export const P_2 = SpriteKind.create()
     export const EnemyLvl_2 = SpriteKind.create()
-    export const Boss = SpriteKind.create()
     export const P_3 = SpriteKind.create()
+    export const ProyectilENemy = SpriteKind.create()
+    export const Boss = SpriteKind.create()
 }
 controller.up.onEvent(ControllerButtonEvent.Pressed, function () {
     if (story.checkLastAnswer("A")) {
@@ -193,7 +194,7 @@ controller.B.onEvent(ControllerButtonEvent.Pressed, function () {
             . . . . . . . . . . . . . . . . 
             `, Player1, 50, 0)
     }
-    pause(100)
+    pause(500)
 })
 scene.onOverlapTile(SpriteKind.Player, assets.tile`myTile`, function (sprite, location) {
     info.changeLifeBy(-8)
@@ -377,6 +378,10 @@ scene.onOverlapTile(SpriteKind.Player, sprites.dungeon.collectibleRedCrystal, fu
     jump = false
     DialogMode = false
 })
+sprites.onOverlap(SpriteKind.Projectile, SpriteKind.Boss, function (sprite, otherSprite) {
+    sprites.destroy(projectile2)
+    statusbars.getStatusBarAttachedTo(StatusBarKind.Health, FINALBOSS).value += -10
+})
 // Question And Answer 1
 // 
 sprites.onOverlap(SpriteKind.Player, SpriteKind.P_1, function (sprite3, otherSprite) {
@@ -399,6 +404,14 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.P_2, function (sprite4, otherSpr
     pause(100)
     DialogMode = false
     Enemies_LV2()
+})
+sprites.onOverlap(SpriteKind.Projectile, SpriteKind.ProyectilENemy, function (sprite, otherSprite) {
+    info.changeLifeBy(1)
+    sprites.destroy(projectile)
+    sprites.destroy(projectile2)
+    if (info.life() > 5) {
+        info.setLife(5)
+    }
 })
 // Enemies Level 2
 // 
@@ -436,7 +449,11 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.EnemyLvl_2, function (sprite, ot
     info.changeLifeBy(-1)
     ENEMY_LV2.setPosition(randint(20, 160), randint(15, 50))
 })
-// Winning conditions
+statusbars.onZero(StatusBarKind.Health, function (status) {
+    sprites.destroy(statusbar.spriteAttachedTo(), effects.fire, 200)
+    pause(1000)
+    game.gameOver(true)
+})
 scene.onOverlapTile(SpriteKind.Player, assets.tile`tile2`, function (sprite, location) {
     Final_Level = true
     sprites.destroy(ENEMY_LV2)
@@ -589,6 +606,14 @@ scene.onOverlapTile(SpriteKind.Player, assets.tile`tile2`, function (sprite, loc
     scene.cameraFollowSprite(Player1)
     DialogMode = false
     Player1.ay = 0
+    statusbar = statusbars.create(10, 8, StatusBarKind.Health)
+    statusbar.attachToSprite(FINALBOSS, 3, 0)
+    statusbar.setColor(2, 15)
+    statusbar.setStatusBarFlag(StatusBarFlag.SmoothTransition, true)
+    game.showLongText("Final level. Destroy the final boss to win, avoid the asteroids", DialogLayout.Bottom)
+    game.showLongText("You have Arrows, press B to use them, if you destroy the asteroids you earn live", DialogLayout.Bottom)
+    game.showLongText("After this, do not press A, or you will be get trapped by the boss", DialogLayout.Bottom)
+    game.showLongText("One advice Go forward", DialogLayout.Bottom)
 })
 // INTRO
 // 
@@ -1069,10 +1094,16 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.Enemy, function (sprite, otherSp
     EnemyLVL1_1.setPosition(randint(150, 160), randint(70, 50))
     EnemYLVL1_2.setPosition(randint(140, 160), randint(70, 50))
 })
+sprites.onOverlap(SpriteKind.ProyectilENemy, SpriteKind.Player, function (sprite, otherSprite) {
+    sprites.destroy(projectile)
+    info.changeLifeBy(-1)
+})
 let Moving = false
 let Titlle_top: TextSprite = null
-let FINALBOSS: Sprite = null
+let statusbar: StatusBarSprite = null
 let ENEMY_LV2: Sprite = null
+let projectile: Sprite = null
+let FINALBOSS: Sprite = null
 let Q_Answer_2: Sprite = null
 let MORE_LIFE: Sprite = null
 let projectile2: Sprite = null
@@ -1315,6 +1346,34 @@ game.onUpdate(function () {
             FINALBOSS.setVelocity(0, -80)
         } else if (FINALBOSS.isHittingTile(CollisionDirection.Top)) {
             FINALBOSS.setVelocity(0, 80)
+        }
+    }
+})
+forever(function () {
+    pause(1000)
+    if (Final_Level) {
+        projectile = sprites.create(img`
+            . . . . . . . . c c c c . . . . 
+            . . . . c c c c c c c c c . . . 
+            . . . c f c c a a a a c a c . . 
+            . . c c f f f f a a a c a a c . 
+            . . c c a f f c a a f f f a a c 
+            . . c c a a a a b c f f f a a c 
+            . c c c c a c c b a f c a a c c 
+            c a f f c c c a b b 6 b b b c c 
+            c a f f f f c c c 6 b b b a a c 
+            c a a c f f c a 6 6 b b b a a c 
+            c c b a a a a b 6 b b a b b a . 
+            . c c b b b b b b b a c c b a . 
+            . . c c c b c c c b a a b c . . 
+            . . . . c b a c c b b b c . . . 
+            . . . . c b b a a 6 b c . . . . 
+            . . . . . . b 6 6 c c . . . . . 
+            `, SpriteKind.ProyectilENemy)
+        tiles.placeOnTile(projectile, tiles.getTileLocation(14, randint(0, 15)))
+        projectile.setVelocity(-50, 0)
+        if (projectile.isHittingTile(CollisionDirection.Left)) {
+            sprites.destroy(projectile)
         }
     }
 })
